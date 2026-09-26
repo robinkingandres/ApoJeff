@@ -27,6 +27,8 @@ def availability(request):
         selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else timezone.localdate()
     except ValueError:
         return Response({'detail': 'Use YYYY-MM-DD for date.'}, status=400)
+    if selected <= timezone.localdate():
+        return Response({'date': selected, 'is_open': False, 'note': 'Appointments must be booked at least one day in advance.', 'booked_count': 0})
     if selected.weekday() == 0:
         return Response({'date': selected, 'is_open': False, 'note': 'Appointments are unavailable on Mondays.', 'booked_count': 0})
     schedule = ScheduleDate.objects.filter(appointment_date=selected).first()

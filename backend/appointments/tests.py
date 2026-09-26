@@ -54,6 +54,31 @@ class AppointmentCapacityTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Mondays', str(response.data))
 
+    def test_same_day_rejects_public_booking(self):
+        payload = {
+            'full_name': 'Same Day Patient', 'email': 'patient@example.com', 'contact_number': '09123456789',
+            'address': 'Test address', 'age': 32, 'gender': 'prefer_not',
+            'appointment_date': date.today().isoformat(),
+        }
+        response = self.client.post('/api/appointments/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('one day in advance', str(response.data))
+
+    def test_reference_numbers_use_a_daily_queue(self):
+        appointment_date = self._future_open_date(5)
+        payload = {
+            'full_name': 'Queue Patient', 'email': 'patient@example.com', 'contact_number': '09123456789',
+            'address': 'Test address', 'age': 32, 'gender': 'prefer_not',
+            'appointment_date': appointment_date.isoformat(),
+        }
+        first = self.client.post('/api/appointments/', payload, format='json')
+        second = self.client.post('/api/appointments/', {**payload, 'email': 'second@example.com'}, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        prefix = appointment_date.strftime('APPT-%m%d-')
+        self.assertEqual(first.data['reference_number'], f'{prefix}01')
+        self.assertEqual(second.data['reference_number'], f'{prefix}02')
+
     def test_group_member_names_are_returned(self):
         appointment_date = date.today() + timedelta(days=4)
         payload = {

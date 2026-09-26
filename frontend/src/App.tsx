@@ -10,8 +10,15 @@ const today = (() => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 })()
 
+const minimumAppointmentDate = (() => {
+  const date = new Date(`${today}T00:00:00`)
+  date.setDate(date.getDate() + 1)
+  while (date.getDay() === 1) date.setDate(date.getDate() + 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+})()
+
 const emptyForm = {
-  full_name: '', email: '', contact_number: '', address: '', age: '', gender: '', appointment_date: today,
+  full_name: '', email: '', contact_number: '', address: '', age: '', gender: '', appointment_date: minimumAppointmentDate,
 }
 
 function App() {
@@ -83,11 +90,12 @@ function App() {
           </div>
           <div className="members-section">
             <div><p className="eyebrow">GROUP BOOKING</p><h3>Additional members</h3><p>Add names for people joining this appointment. You only need to complete the details above once.</p></div>
-            {memberNames.map((name, index) => <div className="member-row" key={`${index}-${name}`}><input aria-label={`Additional member ${index + 1} name`} required value={name} onChange={(event) => updateMember(index, event.target.value)} placeholder={`Member ${index + 1} full name`} /><button type="button" className="remove-member" onClick={() => removeMember(index)} aria-label={`Remove member ${index + 1}`}>×</button></div>)}
+            {memberNames.map((name, index) => <div className="member-row" key={index}><input aria-label={`Additional member ${index + 1} name`} required value={name} onChange={(event) => updateMember(index, event.target.value)} placeholder={`Member ${index + 1} full name`} /><button type="button" className="remove-member" onClick={() => removeMember(index)} aria-label={`Remove member ${index + 1}`}>×</button></div>)}
             <button type="button" className="add-member" onClick={addMember}>+ Add another name</button>
           </div>
           <div className="section-heading schedule-heading"><span className="step">02</span><div><p className="eyebrow">CHOOSE A DATE</p><h2>When can we see you?</h2></div></div>
-          <label className="date-label">Appointment date<input required type="date" min={today} value={form.appointment_date} onChange={(event) => update('appointment_date', event.target.value)} /></label>
+          <label className="date-label">Appointment date<input required type="date" min={minimumAppointmentDate} value={form.appointment_date} onChange={(event) => update('appointment_date', event.target.value)} /></label>
+          <p className="booking-notice">Appointments must be booked at least 24 hours in advance.</p>
           {!dateOpen && <p className="date-closed">Appointments are closed for this date. Please select another date.</p>}
           {error && <p className="error">{error}</p>}
           <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Confirm appointment'} <span>→</span></button>
