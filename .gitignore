@@ -1,0 +1,18 @@
+# Sensitive configuration and local database
+backend/.env
+backend/db.sqlite3
+
+# Python temporary files
+backend/__pycache__/
+backend/**/*.pyc
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Environment and editor files
+.env
+*.log
+.vscode/
+.idea/
+.DS_Store
