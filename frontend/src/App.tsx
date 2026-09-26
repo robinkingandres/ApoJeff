@@ -28,6 +28,7 @@ function App() {
   const [queueDate, setQueueDate] = useState(today)
   const [queue, setQueue] = useState<QueueEntry[] | null>(null)
   const [queueError, setQueueError] = useState('')
+  const [queueDateError, setQueueDateError] = useState('')
   const [queueLoading, setQueueLoading] = useState(true)
   const [dateOpen, setDateOpen] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -55,6 +56,14 @@ function App() {
   const addMember = () => setMemberNames((current) => [...current, ''])
   const updateMember = (index: number, value: string) => setMemberNames((current) => current.map((name, itemIndex) => itemIndex === index ? value : name))
   const removeMember = (index: number) => setMemberNames((current) => current.filter((_, itemIndex) => itemIndex !== index))
+  const changeQueueDate = (value: string) => {
+    if (new Date(`${value}T00:00:00`).getDay() === 1) {
+      setQueueDateError('Appointments are unavailable on Mondays. Choose Tuesday through Sunday.')
+      return
+    }
+    setQueueDateError('')
+    setQueueDate(value)
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -107,7 +116,7 @@ function App() {
           <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Confirm appointment'} <span>→</span></button>
           <p className="privacy">Your information is kept private and used only to manage your appointment.</p>
         </form>
-        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">DAILY LINEUP</p><h2>Queue Dashboard</h2><p>Bookers and reference numbers, shown in queue order.</p><label className="date-label queue-date-label">Appointment date<span className="queue-date-input"><input type="date" min={today} value={queueDate} onChange={(event) => setQueueDate(event.target.value)} /><svg aria-hidden="true" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="1" /><path d="M6 3v4M14 3v4M3 9h14" /></svg></span></label><p className="selected-queue-date">Queue for {new Date(`${queueDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>{queueError && <p className="lookup-error" role="alert">{queueError}</p>}{queueLoading && <p className="queue-empty" role="status">Loading queue...</p>}{!queueLoading && queue && <div className="queue-list" role="status">{queue.length ? queue.map((entry) => <div className="queue-entry" key={entry.reference_number}><span className="queue-number">#{entry.queue_position}</span><div><strong>{entry.booker_name}</strong><span>{entry.reference_number}</span><span className="queue-members">Additional members: {entry.additional_names.length ? entry.additional_names.join(', ') : 'None'}</span></div></div>) : <p className="queue-empty">No active bookings for this date yet.</p>}</div>}<div className="aside-note"><span>✦</span><p>Queue order follows booking time. Cancelled bookings are not included.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>TUESDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p><strong>WALANG GAMUTAN NG MONDAY</strong></div></aside>
+        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">DAILY LINEUP</p><h2>Queue Dashboard</h2><p>Bookers and reference numbers, shown in queue order.</p><label className="date-label queue-date-label">Appointment date<span className="queue-date-input"><input type="date" min={today} value={queueDate} onChange={(event) => changeQueueDate(event.target.value)} /><svg aria-hidden="true" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="1" /><path d="M6 3v4M14 3v4M3 9h14" /></svg></span></label>{queueDateError && <p className="lookup-error" role="alert">{queueDateError}</p>}<p className="selected-queue-date">Queue for {new Date(`${queueDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>{queueError && <p className="lookup-error" role="alert">{queueError}</p>}{queueLoading && <p className="queue-empty" role="status">Loading queue...</p>}{!queueLoading && queue && <div className="queue-list" role="status">{queue.length ? queue.map((entry) => <div className="queue-entry" key={entry.reference_number}><span className="queue-number">#{entry.queue_position}</span><div><strong>{entry.booker_name}</strong><span>{entry.reference_number}</span><span className="queue-members">Additional members: {entry.additional_names.length ? entry.additional_names.join(', ') : 'None'}</span></div></div>) : <p className="queue-empty">No active bookings for this date yet.</p>}</div>}<div className="aside-note"><span>✦</span><p>Queue order follows booking time. Cancelled bookings are not included.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>TUESDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p><strong>WALANG GAMUTAN NG MONDAY</strong></div></aside>
       </section>
       <footer><span>APO Jeff 2026</span><span>Developed by: Russel Guevarra ♡</span></footer>
     </main>
