@@ -74,6 +74,28 @@ def lookup_appointment(request, reference):
     return Response(AppointmentSerializer(appointment).data)
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_daily_queue(request):
+    date_text = request.query_params.get('date')
+    try:
+        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return Response({'detail': 'A date in YYYY-MM-DD format is required.'}, status=400)
+    appointments = Appointment.objects.filter(
+        appointment_date=selected, status__in=ACTIVE_STATUSES
+    ).select_related('patient').order_by('created_at', 'id')
+    return Response({
+        'date': selected,
+        'queue': [
+            {'queue_position': position, 'booker_name': appointment.patient.full_name,
+             'reference_number': appointment.reference_number,
+             'additional_names': appointment.additional_names or []}
+            for position, appointment in enumerate(appointments, start=1)
+        ],
+    })
+
+
 class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAdminUser]

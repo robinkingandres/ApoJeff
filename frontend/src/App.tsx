@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import AdminDashboard from './AdminDashboard'
-import { createAppointment, getAvailability, lookupAppointment } from './services/api'
-import type { Appointment } from './services/api'
+import { createAppointment, getAvailability, getDailyQueue } from './services/api'
+import type { Appointment, QueueEntry } from './services/api'
 import './App.css'
 
 const today = (() => {
@@ -25,8 +25,10 @@ function App() {
   const [form, setForm] = useState(emptyForm)
   const [memberNames, setMemberNames] = useState<string[]>([])
   const [appointment, setAppointment] = useState<Appointment | null>(null)
-  const [lookup, setLookup] = useState('')
-  const [lookupResult, setLookupResult] = useState<Appointment | null>(null)
+  const [queueDate, setQueueDate] = useState(today)
+  const [queue, setQueue] = useState<QueueEntry[] | null>(null)
+  const [queueError, setQueueError] = useState('')
+  const [queueLoading, setQueueLoading] = useState(true)
   const [dateOpen, setDateOpen] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -37,6 +39,17 @@ function App() {
       .then((data) => setDateOpen(data.is_open))
       .catch(() => setDateOpen(true))
   }, [form.appointment_date])
+
+  useEffect(() => {
+    let active = true
+    setQueueLoading(true)
+    setQueueError('')
+    getDailyQueue(queueDate)
+      .then((data) => { if (active) setQueue(data.queue) })
+      .catch((err) => { if (active) setQueueError(err instanceof Error ? err.message : 'Unable to load the queue.') })
+      .finally(() => { if (active) setQueueLoading(false) })
+    return () => { active = false }
+  }, [queueDate])
 
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }))
   const addMember = () => setMemberNames((current) => [...current, ''])
@@ -55,13 +68,6 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const findAppointment = async (event: FormEvent) => {
-    event.preventDefault()
-    setError('')
-    try { setLookupResult(await lookupAppointment(lookup.trim())) }
-    catch (err) { setError(err instanceof Error ? err.message : 'Appointment not found.') }
   }
 
   if (window.location.search.includes('admin=1')) return <AdminDashboard />
@@ -101,7 +107,7 @@ function App() {
           <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Confirm appointment'} <span>→</span></button>
           <p className="privacy">Your information is kept private and used only to manage your appointment.</p>
         </form>
-        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">ALREADY BOOKED?</p><h2>Find your appointment</h2><p>Enter your reference number to view your booking details.</p><form onSubmit={findAppointment}><label className="sr-only" htmlFor="reference">Reference number</label><input id="reference" value={lookup} onChange={(event) => setLookup(event.target.value)} placeholder="APPT-2026-0001" required /><button className="secondary-action">Look up <span>↗</span></button></form>{lookupResult && <div className="lookup-result"><span className="status-dot"></span><strong>{lookupResult.status_label}</strong><p>{lookupResult.patient.full_name}<br />{lookupResult.appointment_date}</p></div>}<div className="aside-note"><span>✦</span><p>Appointments are confirmed by email. Please arrive a few minutes before your scheduled date.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>TUESDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p><strong>WALANG GAMUTAN NG MONDAY</strong></div></aside>
+        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">DAILY LINEUP</p><h2>Queue Dashboard</h2><p>Bookers and reference numbers, shown in queue order.</p><label className="date-label queue-date-label">Appointment date<span className="queue-date-input"><input type="date" min={today} value={queueDate} onChange={(event) => setQueueDate(event.target.value)} /><svg aria-hidden="true" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="1" /><path d="M6 3v4M14 3v4M3 9h14" /></svg></span></label><p className="selected-queue-date">Queue for {new Date(`${queueDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>{queueError && <p className="lookup-error" role="alert">{queueError}</p>}{queueLoading && <p className="queue-empty" role="status">Loading queue...</p>}{!queueLoading && queue && <div className="queue-list" role="status">{queue.length ? queue.map((entry) => <div className="queue-entry" key={entry.reference_number}><span className="queue-number">#{entry.queue_position}</span><div><strong>{entry.booker_name}</strong><span>{entry.reference_number}</span><span className="queue-members">Additional members: {entry.additional_names.length ? entry.additional_names.join(', ') : 'None'}</span></div></div>) : <p className="queue-empty">No active bookings for this date yet.</p>}</div>}<div className="aside-note"><span>✦</span><p>Queue order follows booking time. Cancelled bookings are not included.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>TUESDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p><strong>WALANG GAMUTAN NG MONDAY</strong></div></aside>
       </section>
       <footer><span>APO Jeff 2026</span><span>Developed by: Russel Guevarra ♡</span></footer>
     </main>
