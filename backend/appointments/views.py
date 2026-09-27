@@ -105,6 +105,8 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.action == 'list':
+            queryset = queryset.filter(appointment_date=timezone.localdate()).order_by('created_at', 'id')
         query = self.request.query_params.get('search')
         appointment_status = self.request.query_params.get('status')
         appointment_date = self.request.query_params.get('date')

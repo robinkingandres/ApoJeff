@@ -120,6 +120,23 @@ class TodayScheduleTests(APITestCase):
         self.client.force_authenticate(get_user_model().objects.create_user(username='staff', is_staff=True))
 
     @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
+    def test_patient_records_only_include_manila_today(self, mock_now):
+        from .models import Patient
+        patient = Patient.objects.create(full_name='Today Patient', address='Test address')
+        for offset in (-1, 0, 1):
+            Appointment.objects.create(
+                patient=patient, reference_number=f'TEST-{offset}',
+                appointment_date=timezone.localdate() + timedelta(days=offset),
+            )
+        for params in ({}, {'search': 'Today Patient'}):
+            response = self.client.get('/api/admin/appointments/', params)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([item['reference_number'] for item in response.data], ['TEST-0'])
+            self.assertEqual(response.data[0]['appointment_date'], '2026-09-28')
+        response = self.client.get('/api/admin/appointments/', {'date': '2026-09-29'})
+        self.assertEqual(response.data, [])
+
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
     def test_schedule_defaults_to_manila_today_and_controls_bookings(self, mock_now):
         response = self.client.get('/api/admin/schedule/')
         self.assertEqual(response.status_code, 200)
