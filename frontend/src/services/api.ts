@@ -8,7 +8,8 @@ export type QueueEntry = { queue_position: number; booker_name: string; referenc
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('apo_staff_token')
-  const response = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers ?? {}) }, ...options })
+  const needsStaffAuth = path.startsWith('/admin/')
+  const response = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...(needsStaffAuth && token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers ?? {}) }, ...options })
   const data = await response.json()
   if (!response.ok) throw new Error(data.detail ?? 'Something went wrong. Please try again.')
   return data
