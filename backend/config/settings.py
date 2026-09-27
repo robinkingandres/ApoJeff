@@ -57,8 +57,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database configuration
+# Updated to properly parse the Aiven URL while falling back to SQLite locally
 DATABASES = {
-    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
+    'default': env.db(
+        'DATABASE_URL', 
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
