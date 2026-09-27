@@ -122,7 +122,7 @@ function App() {
             <button type="button" className="add-member" onClick={addMember}>+ Add another name</button>
           </div>
           <div className="section-heading schedule-heading"><span className="step">02</span><div><p className="eyebrow">CHOOSE A DATE</p><h2>When can we see you?</h2></div></div>
-          <label className="date-label">Appointment date<input required type="date" min={minimumAppointmentDate} value={form.appointment_date} onChange={(event) => update('appointment_date', event.target.value)} /></label>
+          <label className="date-label">Appointment date<input className="appointment-date-input appearance-none max-w-full" required type="date" min={minimumAppointmentDate} value={form.appointment_date} onChange={(event) => update('appointment_date', event.target.value)} /></label>
           <p className="booking-notice">Appointments must be booked at least 24 hours in advance.</p>
           {!dateOpen && <p className="date-closed">Appointments are closed for this date. Please select another date.</p>}
           {error && <p className="error">{error}</p>}
