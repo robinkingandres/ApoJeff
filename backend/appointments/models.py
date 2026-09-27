@@ -11,11 +11,11 @@ ACTIVE_STATUSES = ('pending', 'confirmed')
 class Patient(models.Model):
     GENDER_CHOICES = [('female', 'Female'), ('male', 'Male'), ('other', 'Other'), ('prefer_not', 'Prefer not to say')]
     full_name = models.CharField(max_length=160)
-    email = models.EmailField()
-    contact_number = models.CharField(max_length=40)
+    email = models.EmailField(blank=True)
+    contact_number = models.CharField(max_length=40, blank=True)
     address = models.TextField()
-    age = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(120)])
-    gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
+    age = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(120)], null=True, blank=True)
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

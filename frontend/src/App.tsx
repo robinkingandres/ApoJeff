@@ -18,7 +18,7 @@ const minimumAppointmentDate = (() => {
 })()
 
 const emptyForm = {
-  full_name: '', email: '', contact_number: '', address: '', age: '', gender: '', appointment_date: minimumAppointmentDate,
+  full_name: '', address: '', appointment_date: minimumAppointmentDate,
 }
 
 function App() {
@@ -74,7 +74,7 @@ function App() {
     setError('')
     setLoading(true)
     try {
-      const created = await createAppointment({ ...form, age: Number(form.age), additional_names: memberNames.map((name) => name.trim()).filter(Boolean) })
+      const created = await createAppointment({ ...form, additional_names: memberNames.map((name) => name.trim()).filter(Boolean) })
       setAppointment(created)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create appointment.')
@@ -101,10 +101,6 @@ function App() {
           <div className="section-heading"><span className="step">01</span><div><p className="eyebrow">TELL US ABOUT YOU</p><h2>Primary member details</h2></div></div>
           <div className="form-grid">
             <label>Full name<input required value={form.full_name} onChange={(event) => update('full_name', event.target.value)} placeholder="Juan Dela Cruz" /></label>
-            <label>Email address<input required type="email" value={form.email} onChange={(event) => update('email', event.target.value)} placeholder="example@gmail.com" /></label>
-            <label>Contact number<input required value={form.contact_number} onChange={(event) => update('contact_number', event.target.value)} placeholder="09XX XXX XXXX" /></label>
-            <label>Age<input required type="number" min="1" max="120" value={form.age} onChange={(event) => update('age', event.target.value)} placeholder="Your age" /></label>
-            <label>Gender<select required value={form.gender} onChange={(event) => update('gender', event.target.value)}><option value="">Select one</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="prefer_not">Prefer not to say</option></select></label>
             <label className="wide">Address<textarea required rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} placeholder="Your home address" /></label>
           </div>
           <div className="members-section">
@@ -128,7 +124,7 @@ function App() {
 }
 
 function Confirmation({ appointment, onNew }: { appointment: Appointment; onNew: () => void }) {
-  return <main className="confirmation-page"><div className="confirmation-panel"><div className="success-icon">✓</div><p className="eyebrow">YOU'RE ALL SET</p><h1>Appointment<br /><em>confirmed.</em></h1><p className="hero-copy">A confirmation has been sent to {appointment.patient.email}.</p><div className="reference"><span>REFERENCE NUMBER</span><strong>{appointment.reference_number}</strong></div><div className="details"><div><span>Primary member</span><strong>{appointment.patient.full_name}</strong></div><div><span>Date</span><strong>{appointment.appointment_date}</strong></div><div><span>Additional members</span><strong>{appointment.additional_names?.length ? appointment.additional_names.join(', ') : 'None'}</strong></div><div><span>Status</span><strong className="confirmed">{appointment.status_label}</strong></div></div><button className="primary-action" onClick={() => window.print()}>Print confirmation <span>↗</span></button><button className="text-action" onClick={onNew}>Book another appointment</button></div></main>
+  return <main className="confirmation-page"><div className="confirmation-panel"><div className="success-icon">✓</div><p className="eyebrow">YOU'RE ALL SET</p><h1>Appointment<br /><em>confirmed.</em></h1><p className="hero-copy">Your booking is confirmed. Keep your reference number to check your place in the queue.</p><div className="reference"><span>REFERENCE NUMBER</span><strong>{appointment.reference_number}</strong></div><div className="details"><div><span>Primary member</span><strong>{appointment.patient.full_name}</strong></div><div><span>Date</span><strong>{appointment.appointment_date}</strong></div><div><span>Additional members</span><strong>{appointment.additional_names?.length ? appointment.additional_names.join(', ') : 'None'}</strong></div><div><span>Status</span><strong className="confirmed">{appointment.status_label}</strong></div></div><button className="primary-action" onClick={() => window.print()}>Print confirmation <span>↗</span></button><button className="text-action" onClick={onNew}>Book another appointment</button></div></main>
 }
 
 export default App

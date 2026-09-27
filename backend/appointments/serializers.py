@@ -30,11 +30,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
 class AppointmentCreateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=160)
-    email = serializers.EmailField()
-    contact_number = serializers.CharField(max_length=40)
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    contact_number = serializers.CharField(max_length=40, required=False, allow_blank=True, default='')
     address = serializers.CharField()
-    age = serializers.IntegerField(min_value=1, max_value=120)
-    gender = serializers.ChoiceField(choices=Patient.GENDER_CHOICES)
+    age = serializers.IntegerField(min_value=1, max_value=120, required=False, allow_null=True, default=None)
+    gender = serializers.ChoiceField(choices=Patient.GENDER_CHOICES, required=False, allow_blank=True, default='')
     appointment_date = serializers.DateField()
     additional_names = serializers.ListField(child=serializers.CharField(max_length=160), required=False, allow_empty=True)
 

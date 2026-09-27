@@ -6,6 +6,8 @@ from .models import Appointment, EmailEvent
 
 def send_appointment_email(appointment, reminder=False):
     patient = appointment.patient
+    if not patient.email:
+        return
     subject = f"Appointment {'Reminder - Tomorrow' if reminder else 'Confirmation'} - {appointment.reference_number}"
     intro = 'This is a reminder that you have an appointment tomorrow.' if reminder else 'Your appointment has been successfully scheduled.'
     formatted_date = appointment.appointment_date.strftime('%B %d, %Y').replace(' 0', ' ')

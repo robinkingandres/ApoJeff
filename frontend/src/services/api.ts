@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000/api'
 
 export type Slot = { time: string; label: string; booked: number; capacity: number; available: number; is_full: boolean }
-export type Appointment = { id: number; reference_number: string; patient: { full_name: string; email: string; contact_number: string; address: string; age: number; gender: string }; additional_names: string[]; appointment_date: string; appointment_time: string | null; status: string; status_label: string; created_at: string; confirmation_sent_at: string | null; reminder_sent_at: string | null }
+export type Appointment = { id: number; reference_number: string; patient: { full_name: string; email: string; contact_number: string; address: string; age: number | null; gender: string }; additional_names: string[]; appointment_date: string; appointment_time: string | null; status: string; status_label: string; created_at: string; confirmation_sent_at: string | null; reminder_sent_at: string | null }
 export type AdminStats = { today: number; upcoming: number; completed: number; cancelled: number }
 export type ScheduleDate = { date: string; is_open: boolean; note: string; updated_at?: string }
 export type QueueEntry = { queue_position: number; booker_name: string; reference_number: string; additional_names: string[] }
