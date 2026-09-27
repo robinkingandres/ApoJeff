@@ -15,10 +15,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return data
 }
 
-export const getAvailability = (date: string) => request<{ date: string; is_open: boolean; note: string; booked_count: number; slots?: Slot[] }>(`/availability/?date=${date}`)
+export const getAvailability = () => request<{ date: string; is_open: boolean; note: string; booked_count: number; slots?: Slot[] }>('/availability/')
 export const createAppointment = (payload: Record<string, unknown>) => request<Appointment>('/appointments/', { method: 'POST', body: JSON.stringify(payload) })
 export const lookupAppointment = (reference: string) => request<Appointment>(`/appointments/lookup/${encodeURIComponent(reference)}/`)
-export const getDailyQueue = (date: string) => request<{ date: string; queue: QueueEntry[] }>(`/queue/?date=${date}`)
+export const getDailyQueue = () => request<{ date: string; queue: QueueEntry[] }>('/queue/')
 export const staffLogin = (username: string, password: string) => request<{ access: string; refresh: string }>('/auth/token/', { method: 'POST', body: JSON.stringify({ username, password }) })
 export const getAdminAppointments = (filters = '') => request<Appointment[]>(`/admin/appointments/${filters}`)
 export const getAdminStats = () => request<AdminStats>('/admin/appointments/stats/')

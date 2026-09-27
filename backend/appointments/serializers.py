@@ -35,14 +35,12 @@ class AppointmentCreateSerializer(serializers.Serializer):
     address = serializers.CharField()
     age = serializers.IntegerField(min_value=1, max_value=120, required=False, allow_null=True, default=None)
     gender = serializers.ChoiceField(choices=Patient.GENDER_CHOICES, required=False, allow_blank=True, default='')
-    appointment_date = serializers.DateField()
+    appointment_date = serializers.DateField(default=timezone.localdate)
     additional_names = serializers.ListField(child=serializers.CharField(max_length=160), required=False, allow_empty=True)
 
     def validate_appointment_date(self, value):
-        if value <= timezone.localdate():
-            raise serializers.ValidationError('Appointments must be scheduled at least one day in advance.')
-        if value.weekday() == 0:
-            raise serializers.ValidationError('Appointments are unavailable on Mondays. Please select Tuesday through Sunday.')
+        if value != timezone.localdate():
+            raise serializers.ValidationError('Appointments can only be booked for today.')
         return value
 
 

@@ -27,10 +27,8 @@ def availability(request):
         selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else timezone.localdate()
     except ValueError:
         return Response({'detail': 'Use YYYY-MM-DD for date.'}, status=400)
-    if selected <= timezone.localdate():
-        return Response({'date': selected, 'is_open': False, 'note': 'Appointments must be booked at least one day in advance.', 'booked_count': 0})
-    if selected.weekday() == 0:
-        return Response({'date': selected, 'is_open': False, 'note': 'Appointments are unavailable on Mondays.', 'booked_count': 0})
+    if selected != timezone.localdate():
+        return Response({'date': selected, 'is_open': False, 'note': 'Appointments can only be booked for today.', 'booked_count': 0})
     schedule = ScheduleDate.objects.filter(appointment_date=selected).first()
     booked_count = Appointment.objects.filter(appointment_date=selected, status__in=ACTIVE_STATUSES).count()
     return Response({'date': selected, 'is_open': not schedule or schedule.is_open, 'note': schedule.note if schedule else '', 'booked_count': booked_count})
@@ -79,7 +77,7 @@ def lookup_appointment(request, reference):
 def public_daily_queue(request):
     date_text = request.query_params.get('date')
     try:
-        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date()
+        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else timezone.localdate()
     except (TypeError, ValueError):
         return Response({'detail': 'A date in YYYY-MM-DD format is required.'}, status=400)
     appointments = Appointment.objects.filter(

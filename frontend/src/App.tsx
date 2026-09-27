@@ -1,84 +1,61 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import AdminDashboard from './AdminDashboard'
 import { createAppointment, getAvailability, getDailyQueue } from './services/api'
 import type { Appointment, QueueEntry } from './services/api'
 import './App.css'
 
-const today = (() => {
-  const date = new Date()
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
-})()
-
-const minimumAppointmentDate = (() => {
-  const date = new Date(`${today}T00:00:00`)
-  date.setDate(date.getDate() + 1)
-  while (date.getDay() === 1) date.setDate(date.getDate() + 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-})()
-
 const emptyForm = {
-  full_name: '', address: '', appointment_date: minimumAppointmentDate,
+  full_name: '', address: '',
 }
 
 function App() {
   const [form, setForm] = useState(emptyForm)
   const [memberNames, setMemberNames] = useState<string[]>([])
   const [appointment, setAppointment] = useState<Appointment | null>(null)
-  const [queueDate, setQueueDate] = useState(today)
-  const queueDateInput = useRef<HTMLInputElement>(null)
+  const [queueDate, setQueueDate] = useState('')
   const [queue, setQueue] = useState<QueueEntry[] | null>(null)
   const [queuePage, setQueuePage] = useState(1)
   const [queueError, setQueueError] = useState('')
-  const [queueDateError, setQueueDateError] = useState('')
   const [queueLoading, setQueueLoading] = useState(true)
   const [dateOpen, setDateOpen] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let active = true
     setError('')
-    getAvailability(form.appointment_date)
-      .then((data) => setDateOpen(data.is_open))
-      .catch(() => setDateOpen(true))
-  }, [form.appointment_date])
+    const refresh = () => getAvailability()
+      .then((data) => { if (active) setDateOpen(data.is_open) })
+      .catch(() => { if (active) setDateOpen(true) })
+    void refresh()
+    const timer = window.setInterval(refresh, 30000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [appointment])
 
   useEffect(() => {
     let active = true
     setQueuePage(1)
     setQueueLoading(true)
     setQueueError('')
-    getDailyQueue(queueDate)
-      .then((data) => { if (active) setQueue(data.queue) })
+    const refresh = () => getDailyQueue()
+      .then((data) => { if (active) {
+        setQueue(data.queue)
+        setQueueDate(data.date)
+        setQueueError('')
+        setQueuePage((page) => Math.min(page, Math.max(1, Math.ceil(data.queue.length / 5))))
+      } })
       .catch((err) => { if (active) setQueueError(err instanceof Error ? err.message : 'Unable to load the queue.') })
       .finally(() => { if (active) setQueueLoading(false) })
-    return () => { active = false }
-  }, [queueDate])
+    void refresh()
+    const timer = window.setInterval(refresh, 30000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [appointment])
 
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }))
   const addMember = () => setMemberNames((current) => [...current, ''])
   const updateMember = (index: number, value: string) => setMemberNames((current) => current.map((name, itemIndex) => itemIndex === index ? value : name))
   const removeMember = (index: number) => setMemberNames((current) => current.filter((_, itemIndex) => itemIndex !== index))
-  const changeQueueDate = (value: string) => {
-    if (new Date(`${value}T00:00:00`).getDay() === 1) {
-      setQueueDateError('Appointments are unavailable on Mondays. Choose Tuesday through Sunday.')
-      return
-    }
-    setQueueDateError('')
-    setQueueDate(value)
-  }
-  const openQueueDatePicker = () => {
-    const input = queueDateInput.current
-    if (!input) return
-    const pickerInput = input as HTMLInputElement & { showPicker?: () => void }
-    try {
-      if (pickerInput.showPicker) pickerInput.showPicker()
-      else { input.focus(); input.click() }
-    } catch {
-      input.focus()
-      input.click()
-    }
-  }
   const queuePageCount = Math.ceil((queue?.length ?? 0) / 5)
   const visibleQueue = queue?.slice((queuePage - 1) * 5, queuePage * 5) ?? []
 
@@ -121,15 +98,12 @@ function App() {
             {memberNames.map((name, index) => <div className="member-row" key={index}><input aria-label={`Additional member ${index + 1} name`} required value={name} onChange={(event) => updateMember(index, event.target.value)} placeholder={`Member ${index + 1} full name`} /><button type="button" className="remove-member" onClick={() => removeMember(index)} aria-label={`Remove member ${index + 1}`}>×</button></div>)}
             <button type="button" className="add-member" onClick={addMember}>+ Add another name</button>
           </div>
-          <div className="section-heading schedule-heading"><span className="step">02</span><div><p className="eyebrow">CHOOSE A DATE</p><h2>When can we see you?</h2></div></div>
-          <label className="date-label">Appointment date<input className="appointment-date-input appearance-none max-w-full" required type="date" min={minimumAppointmentDate} value={form.appointment_date} onChange={(event) => update('appointment_date', event.target.value)} /></label>
-          <p className="booking-notice">Appointments must be booked at least 24 hours in advance.</p>
-          {!dateOpen && <p className="date-closed">Appointments are closed for this date. Please select another date.</p>}
+          {!dateOpen && <p className="date-closed">Appointments are closed today. Please return on an open day.</p>}
           {error && <p className="error">{error}</p>}
-          <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Confirm appointment'} <span>→</span></button>
+          <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Book Appoinment'} <span>→</span></button>
           <p className="privacy">Your information is kept private and used only to manage your appointment.</p>
         </form>
-        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">DAILY LINEUP</p><h2>Queue Dashboard</h2><p>Bookers and reference numbers, shown in queue order.</p><label className="date-label queue-date-label">Appointment date<span className="queue-date-input"><input ref={queueDateInput} type="date" min={today} value={queueDate} onChange={(event) => changeQueueDate(event.target.value)} /><button type="button" className="queue-calendar-button" aria-label="Open appointment date picker" onClick={(event) => { event.preventDefault(); event.stopPropagation(); openQueueDatePicker() }}><svg aria-hidden="true" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="1" /><path d="M6 3v4M14 3v4M3 9h14" /></svg></button></span></label>{queueDateError && <p className="lookup-error" role="alert">{queueDateError}</p>}<p className="selected-queue-date">Queue for {new Date(`${queueDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>{queueError && <p className="lookup-error" role="alert">{queueError}</p>}{queueLoading && <p className="queue-empty" role="status">Loading queue...</p>}{!queueLoading && queue && <div className="queue-list" role="status">{queue.length ? visibleQueue.map((entry) => <div className="queue-entry" key={entry.reference_number}><span className="queue-number">#{entry.queue_position}</span><div><strong>{entry.booker_name}</strong><span>{entry.reference_number}</span><span className="queue-members">Additional members: {entry.additional_names.length ? entry.additional_names.join(', ') : 'None'}</span></div></div>) : <p className="queue-empty">No active bookings for this date yet.</p>}</div>}{!queueLoading && queuePageCount > 1 && <nav className="queue-pagination" aria-label="Queue pages"><button type="button" disabled={queuePage === 1} onClick={() => setQueuePage((page) => page - 1)}>Previous</button><span>Page {queuePage} of {queuePageCount}</span><button type="button" disabled={queuePage === queuePageCount} onClick={() => setQueuePage((page) => page + 1)}>Next</button></nav>}<div className="aside-note"><span>✦</span><p>Queue order follows booking time. Cancelled bookings are not included.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>TUESDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p><strong>WALANG GAMUTAN NG MONDAY</strong></div></aside>
+        <aside className="side-column"><div className="lookup-card"><p className="eyebrow">DAILY LINEUP</p><h2>Queue Dashboard</h2><p>Bookers and reference numbers, shown in queue order.</p><p className="selected-queue-date">Today's queue: {queueDate && new Date(`${queueDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>{queueError && <p className="lookup-error" role="alert">{queueError}</p>}{queueLoading && <p className="queue-empty" role="status">Loading queue...</p>}{!queueLoading && queue && <div className="queue-list" role="status">{queue.length ? visibleQueue.map((entry) => <div className="queue-entry" key={entry.reference_number}><span className="queue-number">#{entry.queue_position}</span><div><strong>{entry.booker_name}</strong><span>{entry.reference_number}</span><span className="queue-members">Additional members: {entry.additional_names.length ? entry.additional_names.join(', ') : 'None'}</span></div></div>) : <p className="queue-empty">No active bookings for this date yet.</p>}</div>}{!queueLoading && queuePageCount > 1 && <nav className="queue-pagination" aria-label="Queue pages"><button type="button" disabled={queuePage === 1} onClick={() => setQueuePage((page) => page - 1)}>Previous</button><span>Page {queuePage} of {queuePageCount}</span><button type="button" disabled={queuePage === queuePageCount} onClick={() => setQueuePage((page) => page + 1)}>Next</button></nav>}<div className="aside-note"><span>✦</span><p>Queue order follows booking time. Cancelled bookings are not included.</p></div></div><div className="info-card"><p className="eyebrow">LOCATION NG GAMUTAN</p><strong>DAANG CALAYO BRGY. LOOC, NASUGBU, BATANGAS</strong><p>Near ALFAMART LOOC</p><a href="https://www.google.com/maps/search/?api=1&query=GAMUTAN+NI+APO+JEFF" target="_blank" rel="noreferrer">Search GAMUTAN NI APO JEFF on Google Maps ↗</a></div><div className="info-card"><p className="eyebrow">ARAW NG GAMUTAN</p><strong>MONDAY TO SUNDAY</strong><p>8:00 AM - 6:00 PM</p></div></aside>
       </section>
       <footer><span>APO Jeff 2026</span><span>Developed by: Russel Guevarra ♡</span></footer>
     </main>
