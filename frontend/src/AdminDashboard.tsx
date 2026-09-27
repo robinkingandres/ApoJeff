@@ -3,11 +3,6 @@ import type { FormEvent } from 'react'
 import { getAdminAppointments, getAdminStats, getScheduleDate, staffLogin, updateScheduleDate } from './services/api'
 import type { AdminStats, Appointment, ScheduleDate } from './services/api'
 
-const localToday = (() => {
-  const now = new Date()
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
-})()
-
 export default function AdminDashboard() {
   const [loggedIn, setLoggedIn] = useState(Boolean(localStorage.getItem('apo_staff_token')))
   return loggedIn ? <Dashboard onLogout={() => { localStorage.removeItem('apo_staff_token'); setLoggedIn(false) }} /> : <Login onLoggedIn={() => setLoggedIn(true)} />
@@ -32,7 +27,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [page, setPage] = useState(1)
   const [stats, setStats] = useState<AdminStats>({ today: 0, upcoming: 0, completed: 0, cancelled: 0 })
-  const [schedule, setSchedule] = useState<ScheduleDate>({ date: localToday, is_open: true, note: '' })
+  const [schedule, setSchedule] = useState<ScheduleDate>({ date: '', is_open: true, note: '' })
+  const [scheduleBusy, setScheduleBusy] = useState(true)
   const [filters, setFilters] = useState({ search: '', date: '' })
   const [error, setError] = useState('')
   const refresh = useCallback(async () => {
@@ -46,17 +42,25 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const timer = window.setTimeout(() => { void refresh() }, filters.search ? 300 : 0)
     return () => window.clearTimeout(timer)
   }, [refresh, filters.search])
-  useEffect(() => { getScheduleDate(localToday).then(setSchedule).catch(() => undefined) }, [])
-  const changeDate = async (date: string) => {
-    setSchedule({ date, is_open: true, note: '' })
-    try { setSchedule(await getScheduleDate(date)) } catch { setError('Unable to load that schedule date.') }
-  }
+  useEffect(() => {
+    getScheduleDate().then(setSchedule)
+      .catch(() => setError("Unable to load today's schedule. Please reload the page."))
+      .finally(() => setScheduleBusy(false))
+  }, [])
   const toggleDate = async () => {
-    try { setSchedule(await updateScheduleDate(schedule.date, !schedule.is_open, schedule.note)) } catch (err) { setError(err instanceof Error ? err.message : 'Unable to update schedule.') }
+    setScheduleBusy(true)
+    try {
+      setSchedule(await updateScheduleDate(!schedule.is_open))
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update schedule.')
+    } finally {
+      setScheduleBusy(false)
+    }
   }
   const pageCount = Math.ceil(appointments.length / 5)
   const visibleAppointments = appointments.slice((page - 1) * 5, page * 5)
-  return <main className="admin-page dashboard-page"><header className="dashboard-header"><div><p className="eyebrow">APO JEFF THE HEALER</p><h1>Appointment dashboard</h1></div><div className="dashboard-actions"><button className="print-button" onClick={() => window.print()}>Print / Save PDF</button><button className="logout-button" onClick={onLogout}>Sign out</button></div></header>{error && <p className="admin-error">{error}</p>}<section className="stat-grid"><Stat label="Today's appointments" value={stats.today} /></section><section className="schedule-control"><div><p className="eyebrow">SCHEDULE CONTROL</p><h2>Open or close a date</h2><p>Closed dates stop new public bookings immediately.</p></div><div className="schedule-fields"><label>Date<input type="date" value={schedule.date} min={localToday} onChange={(event) => changeDate(event.target.value)} /></label><label>Note<input value={schedule.note} onChange={(event) => setSchedule({ ...schedule, note: event.target.value })} placeholder="Optional reason" /></label><button className={schedule.is_open ? 'close-date' : 'open-date'} onClick={toggleDate}>{schedule.is_open ? 'Close date' : 'Open date'}</button></div><strong className={schedule.is_open ? 'open-label' : 'closed-label'}>{schedule.is_open ? 'OPEN FOR BOOKINGS' : 'CLOSED FOR BOOKINGS'}</strong></section><section className="appointment-panel"><div className="panel-heading"><div><p className="eyebrow">PATIENT RECORDS</p><h2>All appointments</h2></div></div><div className="filters"><input placeholder="Search name, email, reference" value={filters.search} onChange={(event) => { setPage(1); setFilters({ ...filters, search: event.target.value }) }} /><input type="date" value={filters.date} onChange={(event) => { setPage(1); setFilters({ ...filters, date: event.target.value }) }} /></div><div className="appointment-table">{appointments.length === 0 ? <p className="empty-state">No appointments match these filters.</p> : visibleAppointments.map((appointment) => <article className="appointment-row" key={appointment.id}><div className="appointment-main"><strong>{appointment.patient.full_name}</strong><span>{appointment.reference_number} · {appointment.appointment_date} at {appointment.appointment_time}</span></div><div className="patient-detail"><span>{appointment.patient.email}</span><span>{appointment.patient.contact_number}</span><span>{appointment.patient.address}</span>{appointment.additional_names?.length > 0 && <span className="additional-members"><b>Additional members:</b> {appointment.additional_names.join(', ')}</span>}</div></article>)}</div>{pageCount > 1 && <nav className="records-pagination" aria-label="Patient record pages"><button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {pageCount}</span><button type="button" disabled={page === pageCount} onClick={() => setPage((current) => current + 1)}>Next</button></nav>}<table className="print-appointments"><thead><tr><th>Date</th><th>Name</th><th>Additional Members</th><th>Address</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.appointment_date}</td><td>{appointment.patient.full_name}</td><td>{appointment.additional_names?.length ? appointment.additional_names.join(', ') : 'None'}</td><td>{appointment.patient.address}</td></tr>)}</tbody></table></section></main>
+  return <main className="admin-page dashboard-page"><header className="dashboard-header"><div><p className="eyebrow">APO JEFF THE HEALER</p><h1>Appointment dashboard</h1></div><div className="dashboard-actions"><button className="print-button" onClick={() => window.print()}>Print / Save PDF</button><button className="logout-button" onClick={onLogout}>Sign out</button></div></header>{error && <p className="admin-error">{error}</p>}<section className="stat-grid"><Stat label="Today's appointments" value={stats.today} /></section><section className="schedule-control"><div><p className="eyebrow">SCHEDULE CONTROL</p><h2>Today's bookings</h2><p>Open or close bookings for the current day.</p></div><div className="schedule-fields"><button className={schedule.is_open ? 'close-date' : 'open-date'} onClick={toggleDate} disabled={scheduleBusy || !schedule.date}>{schedule.is_open ? 'Close today' : 'Open today'}</button></div><strong className={schedule.is_open ? 'open-label' : 'closed-label'}>{!schedule.date ? 'LOADING SCHEDULE' : schedule.is_open ? 'OPEN FOR BOOKINGS' : 'CLOSED FOR BOOKINGS'}</strong></section><section className="appointment-panel"><div className="panel-heading"><div><p className="eyebrow">PATIENT RECORDS</p><h2>All appointments</h2></div></div><div className="filters"><input placeholder="Search name, email, reference" value={filters.search} onChange={(event) => { setPage(1); setFilters({ ...filters, search: event.target.value }) }} /><input type="date" value={filters.date} onChange={(event) => { setPage(1); setFilters({ ...filters, date: event.target.value }) }} /></div><div className="appointment-table">{appointments.length === 0 ? <p className="empty-state">No appointments match these filters.</p> : visibleAppointments.map((appointment) => <article className="appointment-row" key={appointment.id}><div className="appointment-main"><strong>{appointment.patient.full_name}</strong><span>{appointment.reference_number} · {appointment.appointment_date} at {appointment.appointment_time}</span></div><div className="patient-detail"><span>{appointment.patient.email}</span><span>{appointment.patient.contact_number}</span><span>{appointment.patient.address}</span>{appointment.additional_names?.length > 0 && <span className="additional-members"><b>Additional members:</b> {appointment.additional_names.join(', ')}</span>}</div></article>)}</div>{pageCount > 1 && <nav className="records-pagination" aria-label="Patient record pages"><button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {pageCount}</span><button type="button" disabled={page === pageCount} onClick={() => setPage((current) => current + 1)}>Next</button></nav>}<table className="print-appointments"><thead><tr><th>Date</th><th>Name</th><th>Additional Members</th><th>Address</th></tr></thead><tbody>{appointments.map((appointment) => <tr key={appointment.id}><td>{appointment.appointment_date}</td><td>{appointment.patient.full_name}</td><td>{appointment.additional_names?.length ? appointment.additional_names.join(', ') : 'None'}</td><td>{appointment.patient.address}</td></tr>)}</tbody></table></section></main>
 }
 
 function Stat({ label, value }: { label: string; value: number }) { return <div className="stat-card"><span>{label}</span><strong>{value}</strong></div> }

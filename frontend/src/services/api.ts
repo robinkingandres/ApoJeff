@@ -23,5 +23,5 @@ export const staffLogin = (username: string, password: string) => request<{ acce
 export const getAdminAppointments = (filters = '') => request<Appointment[]>(`/admin/appointments/${filters}`)
 export const getAdminStats = () => request<AdminStats>('/admin/appointments/stats/')
 export const updateAppointmentStatus = (id: string, status: string) => request<Appointment>(`/admin/appointments/${id}/update_status/`, { method: 'PATCH', body: JSON.stringify({ status }) })
-export const getScheduleDate = (date: string) => request<ScheduleDate>(`/admin/schedule/?date=${date}`)
-export const updateScheduleDate = (date: string, is_open: boolean, note: string) => request<ScheduleDate>('/admin/schedule/', { method: 'PATCH', body: JSON.stringify({ date, is_open, note }) })
+export const getScheduleDate = () => request<ScheduleDate>('/admin/schedule/')
+export const updateScheduleDate = (is_open: boolean) => request<ScheduleDate>('/admin/schedule/', { method: 'PATCH', body: JSON.stringify({ is_open }) })

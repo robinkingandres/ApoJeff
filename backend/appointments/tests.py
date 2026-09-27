@@ -114,6 +114,38 @@ class AppointmentCapacityTests(APITestCase):
         return Patient.objects.create(full_name='Test', email='test@example.com', contact_number='0', address='x', age=30, gender='other').pk
 
 
+class TodayScheduleTests(APITestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.client.force_authenticate(get_user_model().objects.create_user(username='staff', is_staff=True))
+
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
+    def test_schedule_defaults_to_manila_today_and_controls_bookings(self, mock_now):
+        response = self.client.get('/api/admin/schedule/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(str(response.data['date']), '2026-09-28')
+        for is_open in (False, True):
+            response = self.client.patch('/api/admin/schedule/', {'is_open': is_open}, format='json')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(ScheduleDate.objects.get().is_open, is_open)
+            self.assertEqual(self.client.get('/api/availability/').data['is_open'], is_open)
+
+    def test_cannot_control_other_dates(self):
+        for offset in (-1, 1):
+            selected = (timezone.localdate() + timedelta(days=offset)).isoformat()
+            response = self.client.patch('/api/admin/schedule/', {'date': selected, 'is_open': False}, format='json')
+            self.assertEqual(response.status_code, 400)
+            response = self.client.patch(f'/api/admin/schedule/?date={selected}', {'is_open': False}, format='json')
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(ScheduleDate.objects.exists())
+
+    def test_schedule_requires_staff(self):
+        self.client.force_authenticate(None)
+        response = self.client.patch('/api/admin/schedule/', {'is_open': False}, format='json')
+        self.assertIn(response.status_code, (401, 403))
+        self.assertFalse(ScheduleDate.objects.exists())
+
+
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class AppointmentEmailTests(APITestCase):
     def test_confirmation_is_sent_to_the_registered_email(self):

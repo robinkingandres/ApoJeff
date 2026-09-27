@@ -49,16 +49,20 @@ def create_public_appointment(request):
 @api_view(['GET', 'PATCH'])
 @permission_classes([permissions.IsAdminUser])
 def schedule_date(request):
+    today = timezone.localdate()
     date_text = request.query_params.get('date') or request.data.get('date')
     try:
-        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date()
+        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else today
     except (TypeError, ValueError):
         return Response({'detail': 'A date in YYYY-MM-DD format is required.'}, status=400)
+    if selected != today:
+        return Response({'detail': 'Only today can be opened or closed.'}, status=400)
+    if request.method == 'PATCH' and not isinstance(request.data.get('is_open'), bool):
+        return Response({'detail': 'is_open must be a boolean.'}, status=400)
     schedule, _ = ScheduleDate.objects.get_or_create(appointment_date=selected)
     if request.method == 'PATCH':
-        schedule.is_open = bool(request.data.get('is_open', schedule.is_open))
-        schedule.note = request.data.get('note', schedule.note)
-        schedule.save(update_fields=['is_open', 'note', 'updated_at'])
+        schedule.is_open = request.data['is_open']
+        schedule.save(update_fields=['is_open', 'updated_at'])
     return Response({'date': schedule.appointment_date, 'is_open': schedule.is_open, 'note': schedule.note, 'updated_at': schedule.updated_at})
 
 
