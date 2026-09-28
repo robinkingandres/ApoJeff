@@ -100,7 +100,7 @@ function App() {
             {memberNames.map((name, index) => <div className="member-row" key={index}><input aria-label={`Additional member ${index + 1} name`} required value={name} onChange={(event) => updateMember(index, event.target.value)} placeholder={`Member ${index + 1} full name`} /><button type="button" className="remove-member" onClick={() => removeMember(index)} aria-label={`Remove member ${index + 1}`}>×</button></div>)}
             <button type="button" className="add-member" onClick={addMember}>+ Add another name</button>
           </div>
-          <p className="booking-date-info">Bookings made today are scheduled for tomorrow. Booking hours: 6:00 AM to 6:00 PM, Monday through Saturday (Manila time). Closed on Sundays.</p>
+          <p className="booking-date-info">Bookings made today are scheduled for tomorrow. Booking hours: 6:00 AM to 6:00 PM.</p>
           {bookingDate && <p className="booking-date-info">Appointment date: <strong>{new Date(`${bookingDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong></p>}
           {!dateOpen && <p className="date-closed">{bookingNote || 'Appointments are closed for tomorrow. Please return on an open booking day.'}</p>}
           {error && <p className="error">{error}</p>}
