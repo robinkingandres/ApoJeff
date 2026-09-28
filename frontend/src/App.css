@@ -11,7 +11,7 @@
 .hero-copy { margin-left: auto; margin-right: auto; }
 .hero > div:first-child > * { display: none; }
 .hero > div:first-child::before { content: 'WELCOME TO APO JEFF THE HEALER ONLINE APPOINTMENT REGISTRATION'; display: block; color: #fff; font-size: clamp(18px, 2.2vw, 30px); font-weight: 700; letter-spacing: 1.8px; line-height: 1.25; margin-bottom: 26px; }
-.hero > div:first-child::after { content: 'You can now book your appointment online. Anytime. Anywhere.'; display: block; color: #fff; font-size: clamp(22px, 2.5vw, 34px); line-height: 1.35; margin: 26px auto 0; max-width: 900px; }
+.hero > div:first-child::after { content: 'You can now book your appointment online.'; display: block; color: #fff; font-size: clamp(22px, 2.5vw, 34px); line-height: 1.35; margin: 26px auto 0; max-width: 900px; }
 .topbar { height: 84px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid var(--line); position: relative; left: 50%; width: 100vw; transform: translateX(-50%); padding-left: max(52px, calc((100vw - 1240px) / 2 + 16px)); padding-right: max(52px, calc((100vw - 1240px) / 2 + 16px)); }
 .brand-mark { width: 42px; height: 42px; display: block; object-fit: cover; border: 2px solid var(--green); border-radius: 2px; }
 .topbar strong, .topbar span { display: block; }.topbar strong { font-size: 15px; letter-spacing: .4px; }.topbar span { color: var(--muted); font-size: 11px; margin-top: 2px; }.admin-link { margin-left: auto; color: var(--green); font-size: 12px; font-weight: 700; text-decoration: none; border-bottom: 1px solid #abc5b8; padding-bottom: 3px; }
