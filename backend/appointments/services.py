@@ -1,5 +1,6 @@
 from django.db import IntegrityError, transaction
 from .emailing import send_appointment_email
+from .booking import booking_error
 from .models import ACTIVE_STATUSES, Appointment, Patient, ScheduleDate, SlotCapacity
 
 
@@ -8,6 +9,9 @@ class SlotUnavailable(Exception):
 
 
 def create_appointment(data):
+    error = booking_error(data['appointment_date'])
+    if error:
+        raise SlotUnavailable(error)
     with transaction.atomic():
         schedule, _ = ScheduleDate.objects.get_or_create(appointment_date=data['appointment_date'])
         schedule = ScheduleDate.objects.select_for_update().get(pk=schedule.pk)

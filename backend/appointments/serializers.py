@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
+from .booking import booking_error, next_appointment_date
 from .models import Appointment, Patient, SlotCapacity, TIME_SLOTS
 
 
@@ -35,12 +36,13 @@ class AppointmentCreateSerializer(serializers.Serializer):
     address = serializers.CharField()
     age = serializers.IntegerField(min_value=1, max_value=120, required=False, allow_null=True, default=None)
     gender = serializers.ChoiceField(choices=Patient.GENDER_CHOICES, required=False, allow_blank=True, default='')
-    appointment_date = serializers.DateField(default=timezone.localdate)
+    appointment_date = serializers.DateField(default=next_appointment_date)
     additional_names = serializers.ListField(child=serializers.CharField(max_length=160), required=False, allow_empty=True)
 
     def validate_appointment_date(self, value):
-        if value != timezone.localdate():
-            raise serializers.ValidationError('Appointments can only be booked for today.')
+        error = booking_error(value)
+        if error:
+            raise serializers.ValidationError(error)
         return value
 
 

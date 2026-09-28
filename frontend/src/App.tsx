@@ -18,7 +18,9 @@ function App() {
   const [queuePage, setQueuePage] = useState(1)
   const [queueError, setQueueError] = useState('')
   const [queueLoading, setQueueLoading] = useState(true)
-  const [dateOpen, setDateOpen] = useState(true)
+  const [dateOpen, setDateOpen] = useState(false)
+  const [bookingDate, setBookingDate] = useState('')
+  const [bookingNote, setBookingNote] = useState('Loading booking availability...')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -26,8 +28,8 @@ function App() {
     let active = true
     setError('')
     const refresh = () => getAvailability()
-      .then((data) => { if (active) setDateOpen(data.is_open) })
-      .catch(() => { if (active) setDateOpen(true) })
+      .then((data) => { if (active) { setDateOpen(data.is_open); setBookingDate(data.date); setBookingNote(data.note) } })
+      .catch(() => { if (active) { setDateOpen(false); setBookingNote('Unable to load booking availability. Please try again shortly.') } })
     void refresh()
     const timer = window.setInterval(refresh, 30000)
     return () => { active = false; window.clearInterval(timer) }
@@ -98,7 +100,9 @@ function App() {
             {memberNames.map((name, index) => <div className="member-row" key={index}><input aria-label={`Additional member ${index + 1} name`} required value={name} onChange={(event) => updateMember(index, event.target.value)} placeholder={`Member ${index + 1} full name`} /><button type="button" className="remove-member" onClick={() => removeMember(index)} aria-label={`Remove member ${index + 1}`}>×</button></div>)}
             <button type="button" className="add-member" onClick={addMember}>+ Add another name</button>
           </div>
-          {!dateOpen && <p className="date-closed">Appointments are closed today. Please return on an open day.</p>}
+          <p className="booking-date-info">Bookings made today are scheduled for tomorrow. Booking is closed on Sundays.</p>
+          {bookingDate && <p className="booking-date-info">Appointment date: <strong>{new Date(`${bookingDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong></p>}
+          {!dateOpen && <p className="date-closed">{bookingNote || 'Appointments are closed for tomorrow. Please return on an open booking day.'}</p>}
           {error && <p className="error">{error}</p>}
           <button className="primary-action" disabled={loading || !dateOpen}>{loading ? 'Submitting appointment...' : 'Book Appoinment'} <span>→</span></button>
           <p className="privacy">Your information is kept private and used only to manage your appointment.</p>

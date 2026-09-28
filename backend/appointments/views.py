@@ -5,6 +5,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from .emailing import send_appointment_email
+from .booking import booking_error, next_appointment_date
 from .models import ACTIVE_STATUSES, Appointment, ScheduleDate, SlotCapacity, TIME_SLOTS
 from .serializers import AppointmentCreateSerializer, AppointmentSerializer, StatusUpdateSerializer
 from .services import SlotUnavailable, create_appointment
@@ -24,11 +25,12 @@ def slot_payload(appointment_date):
 def availability(request):
     date_text = request.query_params.get('date')
     try:
-        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else timezone.localdate()
+        selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else next_appointment_date()
     except ValueError:
         return Response({'detail': 'Use YYYY-MM-DD for date.'}, status=400)
-    if selected != timezone.localdate():
-        return Response({'date': selected, 'is_open': False, 'note': 'Appointments can only be booked for today.', 'booked_count': 0})
+    error = booking_error(selected)
+    if error:
+        return Response({'date': selected, 'is_open': False, 'note': error, 'booked_count': 0})
     schedule = ScheduleDate.objects.filter(appointment_date=selected).first()
     booked_count = Appointment.objects.filter(appointment_date=selected, status__in=ACTIVE_STATUSES).count()
     return Response({'date': selected, 'is_open': not schedule or schedule.is_open, 'note': schedule.note if schedule else '', 'booked_count': booked_count})
@@ -49,14 +51,14 @@ def create_public_appointment(request):
 @api_view(['GET', 'PATCH'])
 @permission_classes([permissions.IsAdminUser])
 def schedule_date(request):
-    today = timezone.localdate()
+    today = next_appointment_date()
     date_text = request.query_params.get('date') or request.data.get('date')
     try:
         selected = timezone.datetime.strptime(date_text, '%Y-%m-%d').date() if date_text else today
     except (TypeError, ValueError):
         return Response({'detail': 'A date in YYYY-MM-DD format is required.'}, status=400)
     if selected != today:
-        return Response({'detail': 'Only today can be opened or closed.'}, status=400)
+        return Response({'detail': 'Only tomorrow can be opened or closed.'}, status=400)
     if request.method == 'PATCH' and not isinstance(request.data.get('is_open'), bool):
         return Response({'detail': 'is_open must be a boolean.'}, status=400)
     schedule, _ = ScheduleDate.objects.get_or_create(appointment_date=selected)

@@ -78,6 +78,7 @@ input:focus, select:focus, textarea:focus { border-color: #fff; box-shadow: 0 0 
 .date-label { max-width: none; width: 100%; }
 .date-label input { width: 100%; }
 .booking-notice { color: var(--muted); font-size: 11px; margin: -10px 0 16px; }
+.booking-card .booking-date-info, .booking-card .booking-date-info strong { color: #fff; }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 1; }
 .patient-detail .additional-members { color: #ffcf8a; margin-top: 9px; }
 select { padding-right: 42px; }
