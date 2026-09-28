@@ -50,7 +50,7 @@ class AppointmentCapacityTests(APITestCase):
         response = self.client.post('/api/appointments/', payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
-    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 22, tzinfo=dt_timezone.utc))
     def test_default_booking_uses_manila_tomorrow(self, mock_now):
         response = self.client.post('/api/appointments/', {
             'full_name': 'Monday Patient', 'address': 'Test address',
@@ -129,7 +129,7 @@ class AppointmentCapacityTests(APITestCase):
         self.assertIn('Sundays', availability.data['note'])
         self.assertFalse(Appointment.objects.exists())
 
-    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 26, 15, 59, tzinfo=dt_timezone.utc))
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 26, 9, 59, tzinfo=dt_timezone.utc))
     def test_saturday_booking_is_scheduled_for_sunday(self, mock_now):
         response = self.client.post('/api/appointments/', {
             'full_name': 'Saturday Patient', 'address': 'Test',
@@ -146,6 +146,42 @@ class AppointmentCapacityTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['appointment_date'], '2027-01-01')
 
+    def test_booking_hours_boundaries_in_manila(self):
+        cases = [
+            (datetime(2026, 9, 27, 21, 59, 59, tzinfo=dt_timezone.utc), False),
+            (datetime(2026, 9, 27, 22, tzinfo=dt_timezone.utc), True),
+            (datetime(2026, 9, 28, 9, 59, 59, tzinfo=dt_timezone.utc), True),
+            (datetime(2026, 9, 28, 10, tzinfo=dt_timezone.utc), False),
+            (datetime(2026, 9, 28, 15, tzinfo=dt_timezone.utc), False),
+        ]
+        for now, is_open in cases:
+            with self.subTest(now=now), patch('django.utils.timezone.now', return_value=now):
+                availability = self.client.get('/api/availability/')
+                self.assertEqual(availability.data['is_open'], is_open)
+                for explicit_date in (False, True):
+                    payload = {'full_name': 'Hours Patient', 'address': 'Test'}
+                    if explicit_date:
+                        payload['appointment_date'] = '2026-09-29'
+                    before = Appointment.objects.count()
+                    response = self.client.post('/api/appointments/', payload, format='json')
+                    if is_open:
+                        self.assertEqual(response.status_code, 201)
+                        self.assertEqual(response.data['appointment_date'], '2026-09-29')
+                    else:
+                        self.assertIn(response.status_code, (400, 409))
+                        self.assertIn('6:00 AM to 6:00 PM', str(response.data))
+                        self.assertEqual(Appointment.objects.count(), before)
+
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 4, tzinfo=dt_timezone.utc))
+    def test_sunday_is_closed_even_during_daytime_hours(self, mock_now):
+        response = self.client.post('/api/appointments/', {
+            'full_name': 'Sunday Patient', 'address': 'Test',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Sundays', str(response.data))
+        self.assertFalse(self.client.get('/api/availability/').data['is_open'])
+        self.assertFalse(Appointment.objects.exists())
+
     def _make_patient(self):
         from .models import Patient
         return Patient.objects.create(full_name='Test', email='test@example.com', contact_number='0', address='x', age=30, gender='other').pk
@@ -156,7 +192,7 @@ class TodayScheduleTests(APITestCase):
         from django.contrib.auth import get_user_model
         self.client.force_authenticate(get_user_model().objects.create_user(username='staff', is_staff=True))
 
-    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 22, tzinfo=dt_timezone.utc))
     def test_patient_records_only_include_manila_today(self, mock_now):
         from .models import Patient
         patient = Patient.objects.create(full_name='Today Patient', address='Test address')
@@ -173,7 +209,7 @@ class TodayScheduleTests(APITestCase):
         response = self.client.get('/api/admin/appointments/', {'date': '2026-09-29'})
         self.assertEqual(response.data, [])
 
-    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 17, tzinfo=dt_timezone.utc))
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 27, 22, tzinfo=dt_timezone.utc))
     def test_schedule_defaults_to_manila_tomorrow_and_controls_bookings(self, mock_now):
         response = self.client.get('/api/admin/schedule/')
         self.assertEqual(response.status_code, 200)
