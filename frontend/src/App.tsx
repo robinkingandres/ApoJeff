@@ -92,8 +92,8 @@ function App() {
         <form className="booking-card" onSubmit={submit}>
           <div className="section-heading"><span className="step">01</span><div><p className="eyebrow">TELL US ABOUT YOU</p><h2>Impormasyon ng Pasyente</h2></div></div>
           <div className="form-grid">
-            <label>Full name<input required value={form.full_name} onChange={(event) => update('full_name', event.target.value)} placeholder="Juan Dela Cruz" /></label>
-            <label className="wide">Address<textarea required rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} placeholder="Your home address" /></label>
+            <label>Buong Pangalan<input required value={form.full_name} onChange={(event) => update('full_name', event.target.value)} placeholder="Juan Dela Cruz" /></label>
+            <label className="wide">Tirahan<textarea required rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} placeholder="Your home address" /></label>
           </div>
           <div className="members-section">
             <div><p className="eyebrow">GROUP BOOKING</p><h3>Mga Karagdagang Kasama</h3><p>Ilagay ang pangalan ng mga kasama sa appointment na ito. Isang beses mo lang kailangang punan ang mga detalye sa itaas</p></div>
