@@ -30,6 +30,7 @@ class SlotCapacity(models.Model):
 
 class ScheduleDate(models.Model):
     appointment_date = models.DateField(unique=True)
+    last_queue_number = models.PositiveIntegerField(default=0)
     is_open = models.BooleanField(default=True)
     note = models.CharField(max_length=200, blank=True)
     updated_at = models.DateTimeField(auto_now=True)

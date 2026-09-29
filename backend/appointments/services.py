@@ -21,7 +21,12 @@ def create_appointment(data):
             full_name=data['full_name'], email=data.get('email', ''), contact_number=data.get('contact_number', ''),
             address=data['address'], age=data.get('age'), gender=data.get('gender', ''),
         )
-        queue_number = Appointment.objects.filter(appointment_date=data['appointment_date']).count() + 1
+        queue_number = schedule.last_queue_number + 1
+        prefix = f"APPT-{data['appointment_date']:%m%d}-"
+        while Appointment.objects.filter(reference_number=f'{prefix}{queue_number:02d}').exists():
+            queue_number += 1
+        schedule.last_queue_number = queue_number
+        schedule.save(update_fields=['last_queue_number'])
         appointment = Appointment.objects.create(
             reference_number=f"APPT-{data['appointment_date']:%m%d}-{queue_number:02d}", patient=patient,
             appointment_date=data['appointment_date'],

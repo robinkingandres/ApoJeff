@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
-from rest_framework import permissions, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from .emailing import send_appointment_email
@@ -100,7 +100,7 @@ def public_daily_queue(request):
     })
 
 
-class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
+class AppointmentViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAdminUser]
     queryset = Appointment.objects.select_related('patient').all().order_by('appointment_date', 'appointment_time')

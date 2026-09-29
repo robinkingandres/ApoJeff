@@ -30,6 +30,7 @@ The patient booking page is served by Vite. Staff can use Django Admin at `http:
 - `GET /api/admin/appointments/`: admin appointment list with `search`, `status`, and `date` filters
 - `GET /api/admin/appointments/stats/`: admin dashboard counts
 - `PATCH /api/admin/appointments/<id>/update_status/`: admin status update
+- `DELETE /api/admin/appointments/<id>/`: staff-only permanent appointment deletion
 
 ## Reminders
 

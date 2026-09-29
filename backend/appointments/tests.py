@@ -187,6 +187,67 @@ class AppointmentCapacityTests(APITestCase):
         return Patient.objects.create(full_name='Test', email='test@example.com', contact_number='0', address='x', age=30, gender='other').pk
 
 
+class AppointmentDeletionTests(APITestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from .models import Patient
+        self.staff = get_user_model().objects.create_user(username='staff', is_staff=True)
+        self.patient = Patient.objects.create(full_name='Delete Patient', address='Test address')
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, reference_number='APPT-DELETE-1', appointment_date=timezone.localdate(),
+        )
+        self.url = f'/api/admin/appointments/{self.appointment.pk}/'
+
+    def test_staff_delete_removes_appointment_from_records_queue_and_counts(self):
+        self.client.force_authenticate(self.staff)
+        other = Appointment.objects.create(
+            patient=self.patient, reference_number='APPT-KEEP-2', appointment_date=timezone.localdate(),
+        )
+        EmailEvent.objects.create(appointment=self.appointment, event_type='confirmation')
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Appointment.objects.filter(pk=self.appointment.pk).exists())
+        self.assertFalse(EmailEvent.objects.filter(appointment_id=self.appointment.pk).exists())
+        self.patient.refresh_from_db()
+        self.assertEqual(list(self.patient.appointments.values_list('pk', flat=True)), [other.pk])
+        records = self.client.get('/api/admin/appointments/').data
+        self.assertEqual([record['id'] for record in records], [other.pk])
+        self.assertEqual(self.client.get('/api/admin/appointments/stats/').data['today'], 1)
+        queue = self.client.get('/api/queue/').data['queue']
+        self.assertEqual([entry['reference_number'] for entry in queue], [other.reference_number])
+        self.assertEqual(queue[0]['queue_position'], 1)
+        self.assertEqual(self.client.get(f'/api/appointments/lookup/{self.appointment.reference_number}/').status_code, 404)
+        self.assertEqual(self.client.delete(self.url).status_code, 404)
+
+    def test_delete_requires_staff(self):
+        from django.contrib.auth import get_user_model
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.client.force_authenticate(get_user_model().objects.create_user(username='patient'))
+        self.assertEqual(self.client.delete(self.url).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Appointment.objects.filter(pk=self.appointment.pk).exists())
+
+    @patch('django.utils.timezone.now', return_value=datetime(2026, 9, 28, 4, tzinfo=dt_timezone.utc))
+    def test_bookings_after_deletions_keep_unique_increasing_references(self, mock_now):
+        self.client.force_authenticate(self.staff)
+        self.assertEqual(self.client.delete(self.url).status_code, 204)
+        payload = {'full_name': 'New Patient', 'address': 'Test address'}
+        bookings = []
+        for _ in range(3):
+            response = self.client.post('/api/appointments/', payload, format='json')
+            self.assertEqual(response.status_code, 201)
+            bookings.append(response.data)
+        for expected_number, index in enumerate((1, 2, 0), start=4):
+            self.assertEqual(self.client.delete(f"/api/admin/appointments/{bookings[index]['id']}/").status_code, 204)
+            response = self.client.post('/api/appointments/', payload, format='json')
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.data['reference_number'], f'APPT-0929-{expected_number:02d}')
+            self.assertEqual(self.client.delete(f"/api/admin/appointments/{response.data['id']}/").status_code, 204)
+        self.assertEqual(self.client.get('/api/availability/').data['booked_count'], 0)
+        response = self.client.post('/api/appointments/', payload, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['reference_number'], 'APPT-0929-07')
+
+
 class TodayScheduleTests(APITestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model

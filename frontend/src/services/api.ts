@@ -10,7 +10,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('apo_staff_token')
   const needsStaffAuth = path.startsWith('/admin/')
   const response = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...(needsStaffAuth && token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers ?? {}) }, ...options })
-  const data = await response.json()
+  const data = response.status === 204 ? undefined : await response.json()
   if (!response.ok) throw new Error(data.detail ?? 'Something went wrong. Please try again.')
   return data
 }
@@ -22,6 +22,7 @@ export const getDailyQueue = () => request<{ date: string; queue: QueueEntry[] }
 export const staffLogin = (username: string, password: string) => request<{ access: string; refresh: string }>('/auth/token/', { method: 'POST', body: JSON.stringify({ username, password }) })
 export const getAdminAppointments = (filters = '') => request<Appointment[]>(`/admin/appointments/${filters}`)
 export const getAdminStats = () => request<AdminStats>('/admin/appointments/stats/')
+export const deleteAppointment = (id: number) => request<void>(`/admin/appointments/${id}/`, { method: 'DELETE' })
 export const updateAppointmentStatus = (id: string, status: string) => request<Appointment>(`/admin/appointments/${id}/update_status/`, { method: 'PATCH', body: JSON.stringify({ status }) })
 export const getScheduleDate = () => request<ScheduleDate>('/admin/schedule/')
 export const updateScheduleDate = (is_open: boolean) => request<ScheduleDate>('/admin/schedule/', { method: 'PATCH', body: JSON.stringify({ is_open }) })
